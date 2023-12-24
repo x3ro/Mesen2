@@ -54,7 +54,7 @@ endif
 
 MESENFLAGS += -m64
 
-DEBUG ?= 0
+DEBUG ?= 1
 
 ifeq ($(DEBUG),0)
 	MESENFLAGS += -O3
