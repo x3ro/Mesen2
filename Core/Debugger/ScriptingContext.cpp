@@ -50,6 +50,55 @@ ScriptingContext::~ScriptingContext()
 	}
 }
 
+static const char writemod[] =
+    "local _M = {}\n"
+    "return _M\n";
+
+static int openf(lua_State* L) {
+	printf("foobar\n");
+
+    /* Get the module name as passed to luaL_requiref. */
+    char const* const modname = lua_tostring(L, 1);
+
+    int res;
+
+    /*
+    Check if we know the module. We can use this function to load many
+    different Lua modules uniquely identified by modname.
+    */
+    if (strcmp(modname, "util") == 0) {
+        /*
+        Parses the Lua source code and leaves the compiled function on the top
+        of the stack if there are no errors.
+        */
+        res = luaL_loadbufferx(L,
+                               writemod,
+                               sizeof(writemod) - 1,
+                               "util",
+                               "t");
+    }
+    else {
+        /* Unknown module. */
+        return luaL_error(L, "unknown module \"%s\"", modname);
+    }
+
+    /* Check if the call to luaL_loadbufferx was successful. */
+    if (res != LUA_OK) {
+        return lua_error(L);
+    }
+
+    /*
+    Runs the Lua code and returns whatever it returns as the result of openf,
+    which will be used as the value of the module.
+    */
+    res = lua_pcall(L, 0, 1, 0);
+	if (res != LUA_OK) {
+        return lua_error(L);
+    }
+
+    return 1;
+}
+
 bool ScriptingContext::LoadScript(string scriptName, string scriptContent, Debugger* debugger)
 {
 	_scriptName = scriptName;
@@ -79,6 +128,7 @@ bool ScriptingContext::LoadScript(string scriptName, string scriptContent, Debug
 	}
 
 	luaL_requiref(_lua, "emu", LuaApi::GetLibrary, 1);
+	luaL_requiref(_lua, "util", openf, 1);
 	Log("Loading script...");
 	if((iErr = luaL_loadbufferx(_lua, scriptContent.c_str(), scriptContent.size(), ("@" + scriptName).c_str(), nullptr)) == 0) {
 		_timer.Reset();
@@ -106,6 +156,8 @@ void ScriptingContext::ExecutionCountHook(lua_State* lua)
 	lua_setwatchdogtimer(lua, ScriptingContext::ExecutionCountHook, 1000);
 }
 
+
+
 void ScriptingContext::LuaOpenLibs(lua_State* L, bool allowIoOsAccess)
 {
 	constexpr luaL_Reg loadedlibs[] = {
@@ -131,7 +183,7 @@ void ScriptingContext::LuaOpenLibs(lua_State* L, bool allowIoOsAccess)
 				continue;
 			}
 		}
-		luaL_requiref(L, lib->name, lib->func, 1);
+		luaL_requiref(L, lib->name, lib->func, true);
 		lua_pop(L, 1);  /* remove lib */
 	}
 }
