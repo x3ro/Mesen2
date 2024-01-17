@@ -17,7 +17,9 @@ BaseControlManager::BaseControlManager(Emulator* emu, CpuType cpuType)
 	_emu = emu;
 	_cpuType = cpuType;
 	_pollCounter = 0;
-	AddSystemControlDevice(_emu->GetSystemActionManager());
+	if(_emu->GetSystemActionManager()) {
+		AddSystemControlDevice(_emu->GetSystemActionManager());
+	}
 	UpdateControlDevices();
 }
 

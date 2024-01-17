@@ -118,6 +118,9 @@ PUBLISHFLAGS ?=  -r $(MESENPLATFORM) --no-self-contained true -p:PublishSingleFi
 CORESRC := $(shell find Core -name '*.cpp')
 COREOBJ := $(CORESRC:.cpp=.o)
 
+CLISRC := $(shell find Cli -name '*.cpp')
+CLIOBJ := $(CLISRC:.cpp=.o)
+
 UTILSRC := $(shell find Utilities -name '*.cpp' -o -name '*.c')
 UTILOBJ := $(addsuffix .o,$(basename $(UTILSRC)))
 
@@ -170,6 +173,12 @@ ui: InteropDLL/$(OBJFOLDER)/$(SHAREDLIB)
 	cd UI && dotnet publish -c $(BUILD_TYPE) -p:OptimizeUi="true" $(PUBLISHFLAGS)
 
 core: InteropDLL/$(OBJFOLDER)/$(SHAREDLIB)
+
+.PHONY: bin/cli
+bin/cli: $(CLIOBJ) core
+	$(CXX) $(CXXFLAGS) $(LINKOPTIONS) $(LINKCHECKUNRESOLVED) Cli/main.o -o bin/cli $(DLLOBJ) $(SEVENZIPOBJ) $(LUAOBJ) $(LINUXOBJ) $(MACOSOBJ) $(LIBEVDEVOBJ) $(UTILOBJ) $(COREOBJ) $(SDL2INC) -pthread $(FSLIB) $(SDL2LIB) $(LIBEVDEVLIB)
+
+cli: $(CLIOBJ) core bin/cli
 
 pgohelper: InteropDLL/$(OBJFOLDER)/$(SHAREDLIB)
 	mkdir -p PGOHelper/$(OBJFOLDER) && cd PGOHelper/$(OBJFOLDER) && $(CXX) $(CXXFLAGS) $(LINKCHECKUNRESOLVED) -o pgohelper ../PGOHelper.cpp ../../bin/pgohelperlib.so -pthread $(FSLIB) $(SDL2LIB) $(LIBEVDEVLIB)
